@@ -1,0 +1,194 @@
+!pip install transformers datasets pandas torch
+
+import pandas as pd #hugging face
+import torch
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
+
+!pip install huggingface_hub #hugging face api
+from huggingface_hub import HfApi
+from huggingface_hub import login
+login("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")  # Replace with your actual token
+api = HfApi()
+api.create_repo("medical-documentation-dataset", repo_type="dataset", exist_ok=True)
+
+!pip install streamlit fastapi uvicorn pyngrok pandas
+
+import uvicorn
+from fastapi import FastAPI
+import pandas as pd
+import nest_asyncio
+import subprocess
+import os
+
+app = FastAPI()
+
+# ✅ Load medical dataset safely
+def load_data():
+    return pd.read_csv("medical_notes.csv").drop_duplicates() if os.path.exists("medical_notes.csv") else pd.DataFrame(
+        columns=["Symptoms", "Diagnosis", "Treatment Plan", "Prescription", "Follow-up Instructions"])
+
+df = load_data()
+
+@app.get("/")
+def home():
+    return {"message": "Welcome to Medical Note Generator API"}
+
+@app.get("/generate_note/")
+def generate_note(symptoms: str):
+    """Generates structured medical notes based on symptoms."""
+    results = df[df["Symptoms"].str.contains(symptoms, case=False, na=False)]
+    if results.empty:
+        return {"message": "No matching records found"}
+    
+    note = results.iloc[0].to_dict()  # Return the first match
+    return {"generated_note": note}
+
+# ✅ Fix for running FastAPI inside Colab
+nest_asyncio.apply()
+
+# ✅ Run FastAPI in the background so that Colab execution is not blocked
+subprocess.Popen(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"])
+
+!pip install pyngrok
+from pyngrok import ngrok
+
+# Authenticate ngrok (Replace YOUR_AUTH_TOKEN with the actual token)
+ngrok.set_auth_token("2tg6m6bm1ySW3fPjF3Hi4u9e67v_5SH8TcqbTUMXQTdq2ZVsr")
+# Kill any existing tunnels
+ngrok.kill()
+
+# Start a new tunnel
+public_url = ngrok.connect(8000).public_url
+print(f"Public FastAPI URL: {public_url}")
+
+!streamlit run streamlit_app.py &> logs.txt & #killling previous streamlit when you edit ui 
+!rm -rf ~/.streamlit
+!pkill -f streamlit
+
+import pandas as pd
+
+# Define a larger structured dataset with serious diseases
+data = [
+    ["Fever, cough, shortness of breath", "Pneumonia", "N/A", "Bed rest, oxygen support", "Azithromycin 500mg daily", "Re-evaluate in 3 days"],
+    ["Severe headache, nausea, dizziness", "Migraine", "N/A", "Pain management, hydration therapy", "Sumatriptan 50mg as needed", "Neurology consultation if persistent"],
+    ["Chest pain, sweating, nausea", "Myocardial Infarction", "Emergency Angioplasty", "ICU observation, cardiac rehab", "Aspirin 81mg daily, Beta-blockers", "Stress test in 2 weeks"],
+    ["Abdominal pain, vomiting, diarrhea", "Gastroenteritis", "N/A", "IV fluids, antiemetics", "Ondansetron 4mg every 8 hours", "Follow-up in 1 week if symptoms persist"],
+    ["Fatigue, weight loss, night sweats", "Tuberculosis", "N/A", "Isolation, long-term antibiotics", "Rifampin 600mg daily", "Chest X-ray in 1 month"],
+    ["Blurred vision, excessive thirst, fatigue", "Diabetes Mellitus", "N/A", "Insulin therapy, dietary management", "Metformin 500mg twice daily", "Monitor HbA1c in 3 months"],
+    ["Sudden weakness, difficulty speaking", "Stroke", "Thrombectomy", "Physiotherapy, BP management", "Aspirin 300mg daily", "Neurology follow-up in 2 weeks"],
+    ["Severe joint pain, swelling", "Rheumatoid Arthritis", "N/A", "Immunosuppressants, physiotherapy", "Methotrexate 15mg weekly", "Rheumatology check-up in 1 month"],
+    ["Difficulty swallowing, weight loss", "Esophageal Cancer", "Esophagectomy", "Chemotherapy, radiation", "Cisplatin + 5-FU", "Oncology review in 2 weeks"],
+    ["Severe abdominal pain, jaundice", "Pancreatic Cancer", "Whipple Procedure", "Chemotherapy", "Gemcitabine", "CT scan in 1 month"],
+    ["Frequent urination, bone pain", "Prostate Cancer", "Prostatectomy", "Hormonal therapy, radiation", "Leuprolide 22.5mg injection", "PSA test in 6 weeks"],
+    ["Chronic cough, blood in sputum", "Lung Cancer", "Lobectomy", "Radiation, chemotherapy", "Erlotinib 150mg daily", "CT scan in 3 months"],
+    ["Memory loss, confusion, difficulty speaking", "Alzheimer’s Disease", "N/A", "Cognitive therapy, supportive care", "Donepezil 10mg daily", "Neurology check-up in 6 months"],
+    ["Fever, swollen lymph nodes, skin rash", "Lymphoma", "Bone Marrow Biopsy", "Chemotherapy, targeted therapy", "Rituximab + CHOP", "PET scan in 2 months"],
+]
+
+# Define column names
+columns = ["Symptoms", "Diagnosis", "Operation Time", "Treatment Plan", "Prescription", "Follow-up Instructions"]
+
+# Create a DataFrame
+df = pd.DataFrame(data, columns=columns)
+
+# Save to CSV
+df.to_csv("medical_notes.csv", index=False)
+
+print("Larger dataset saved as 'medical_notes.csv'")
+
+%%writefile streamlit_app.py
+import streamlit as st
+import pandas as pd
+import os
+
+# File path for saving the dataset
+CSV_FILE = "medical_notes.csv"
+
+# Ensure file exists
+if not os.path.exists(CSV_FILE):
+    pd.DataFrame(columns=["Symptoms", "Diagnosis", "Treatment Plan", "Prescription", "Follow-up Instructions"]).to_csv(CSV_FILE, index=False)
+
+# Function to load dataset
+def load_data():
+    return pd.read_csv(CSV_FILE)
+
+df = load_data()
+
+# Custom CSS for better UI
+st.markdown(
+    """
+    <style>
+        body { background-color: #f7f9fc; }
+        .title { text-align: center; font-size: 36px; font-weight: bold; color: #004466; margin-bottom: 20px; }
+        .search-container { text-align: center; }
+        .result-box { border: 2px solid #004466; padding: 15px; border-radius: 10px; margin-bottom: 10px; background-color: #e8f0fe; }
+        .footer { text-align: center; color: grey; margin-top: 30px; font-size: 14px; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Header
+st.markdown("<h1 class='title'>🏥 Medical Documentation Assistant</h1>", unsafe_allow_html=True)
+
+# **Doctor Upload Section**
+st.sidebar.header("👨‍⚕️ Doctor Upload Panel")
+uploaded_file = st.sidebar.file_uploader("Upload medical dataset (CSV)", type=["csv"])
+
+if uploaded_file is not None:
+    df_new = pd.read_csv(uploaded_file)
+
+    # Validate CSV Columns
+    required_columns = ["Symptoms", "Diagnosis", "Treatment Plan", "Prescription", "Follow-up Instructions"]
+    if all(col in df_new.columns for col in required_columns):
+        df = pd.concat([df, df_new], ignore_index=True)
+        df.to_csv(CSV_FILE, index=False)  # ✅ Save permanently
+        st.sidebar.success("✅ Dataset updated successfully! Refresh the page to apply changes.")
+    else:
+        st.sidebar.error("❌ Incorrect file format. Please upload a valid medical CSV.")
+
+# **Search Section**
+st.markdown("<div class='search-container'>", unsafe_allow_html=True)
+query = st.text_input("🔍 Enter symptoms or keywords:", key="query_input")
+st.markdown("</div>", unsafe_allow_html=True)
+
+if st.button("Search 🔎", use_container_width=True):
+    df = load_data()  # ✅ Reload dataset before searching
+    results = df[df['Symptoms'].str.contains(query, case=False, na=False)]
+
+    if not results.empty:
+        st.success("✅ **Relevant Medical Notes Found:**")
+        for _, row in results.iterrows():
+            st.markdown(
+                f"""
+                <div class="result-box">
+                    <h4 style="color: #004466;">📌 Diagnosis: {row['Diagnosis']}</h4>
+                    <p><b>🩺 Symptoms:</b> {row['Symptoms']}</p>
+                    <p><b>🩺 Treatment Plan:</b> {row['Treatment Plan']}</p>
+                    <p><b>💊 Prescription:</b> {row['Prescription']}</p>
+                    <p><b>📅 Follow-up Instructions:</b> {row['Follow-up Instructions']}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+    else:
+        st.warning("❌ No matching records found. Please try different keywords.")
+
+# Footer
+st.markdown("<div class='footer'>Powered by <b>TECHTITANS 🚀</b></div>", unsafe_allow_html=True)
+
+!pip install streamlit fastapi uvicorn pyngrok pandas requests nest_asyncio
+
+import time
+import subprocess
+from pyngrok import ngrok
+
+# ✅ Start Streamlit in background
+process = subprocess.Popen(["streamlit", "run", "streamlit_app.py"])
+
+# ✅ Wait for Streamlit to start
+time.sleep(5)
+
+# ✅ Start ngrok tunnel for Streamlit (port 8501)
+public_url = ngrok.connect(addr="8501", proto="http").public_url
+print(f"🌍 Public Streamlit URL: {public_url}")
