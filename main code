@@ -1,13 +1,13 @@
 !pip install transformers datasets pandas torch
 
-import pandas as pd #hugging face
+import pandas as pd 
 import torch
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, pipeline
 
-!pip install huggingface_hub #hugging face api
+!pip install huggingface_hub 
 from huggingface_hub import HfApi
 from huggingface_hub import login
-login("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")  # Replace with your actual token
+login("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") 
 api = HfApi()
 api.create_repo("medical-documentation-dataset", repo_type="dataset", exist_ok=True)
 
@@ -22,7 +22,7 @@ import os
 
 app = FastAPI()
 
-# ✅ Load medical dataset safely
+
 def load_data():
     return pd.read_csv("medical_notes.csv").drop_duplicates() if os.path.exists("medical_notes.csv") else pd.DataFrame(
         columns=["Symptoms", "Diagnosis", "Treatment Plan", "Prescription", "Follow-up Instructions"])
@@ -40,34 +40,34 @@ def generate_note(symptoms: str):
     if results.empty:
         return {"message": "No matching records found"}
     
-    note = results.iloc[0].to_dict()  # Return the first match
+    note = results.iloc[0].to_dict() 
     return {"generated_note": note}
 
-# ✅ Fix for running FastAPI inside Colab
+
 nest_asyncio.apply()
 
-# ✅ Run FastAPI in the background so that Colab execution is not blocked
+
 subprocess.Popen(["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"])
 
 !pip install pyngrok
 from pyngrok import ngrok
 
-# Authenticate ngrok (Replace YOUR_AUTH_TOKEN with the actual token)
+
 ngrok.set_auth_token("2tg6m6bm1ySW3fPjF3Hi4u9e67v_5SH8TcqbTUMXQTdq2ZVsr")
-# Kill any existing tunnels
+
 ngrok.kill()
 
-# Start a new tunnel
+
 public_url = ngrok.connect(8000).public_url
 print(f"Public FastAPI URL: {public_url}")
 
-!streamlit run streamlit_app.py &> logs.txt & #killling previous streamlit when you edit ui 
+!streamlit run streamlit_app.py &> logs.txt &  
 !rm -rf ~/.streamlit
 !pkill -f streamlit
 
 import pandas as pd
 
-# Define a larger structured dataset with serious diseases
+
 data = [
     ["Fever, cough, shortness of breath", "Pneumonia", "N/A", "Bed rest, oxygen support", "Azithromycin 500mg daily", "Re-evaluate in 3 days"],
     ["Severe headache, nausea, dizziness", "Migraine", "N/A", "Pain management, hydration therapy", "Sumatriptan 50mg as needed", "Neurology consultation if persistent"],
@@ -85,13 +85,12 @@ data = [
     ["Fever, swollen lymph nodes, skin rash", "Lymphoma", "Bone Marrow Biopsy", "Chemotherapy, targeted therapy", "Rituximab + CHOP", "PET scan in 2 months"],
 ]
 
-# Define column names
 columns = ["Symptoms", "Diagnosis", "Operation Time", "Treatment Plan", "Prescription", "Follow-up Instructions"]
 
-# Create a DataFrame
+
 df = pd.DataFrame(data, columns=columns)
 
-# Save to CSV
+
 df.to_csv("medical_notes.csv", index=False)
 
 print("Larger dataset saved as 'medical_notes.csv'")
@@ -101,20 +100,18 @@ import streamlit as st
 import pandas as pd
 import os
 
-# File path for saving the dataset
+
 CSV_FILE = "medical_notes.csv"
 
-# Ensure file exists
 if not os.path.exists(CSV_FILE):
     pd.DataFrame(columns=["Symptoms", "Diagnosis", "Treatment Plan", "Prescription", "Follow-up Instructions"]).to_csv(CSV_FILE, index=False)
 
-# Function to load dataset
 def load_data():
     return pd.read_csv(CSV_FILE)
 
 df = load_data()
 
-# Custom CSS for better UI
+
 st.markdown(
     """
     <style>
@@ -128,32 +125,30 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Header
+
 st.markdown("<h1 class='title'>🏥 Medical Documentation Assistant</h1>", unsafe_allow_html=True)
 
-# **Doctor Upload Section**
 st.sidebar.header("👨‍⚕️ Doctor Upload Panel")
 uploaded_file = st.sidebar.file_uploader("Upload medical dataset (CSV)", type=["csv"])
 
 if uploaded_file is not None:
     df_new = pd.read_csv(uploaded_file)
 
-    # Validate CSV Columns
+  
     required_columns = ["Symptoms", "Diagnosis", "Treatment Plan", "Prescription", "Follow-up Instructions"]
     if all(col in df_new.columns for col in required_columns):
         df = pd.concat([df, df_new], ignore_index=True)
-        df.to_csv(CSV_FILE, index=False)  # ✅ Save permanently
+        df.to_csv(CSV_FILE, index=False)  
         st.sidebar.success("✅ Dataset updated successfully! Refresh the page to apply changes.")
     else:
         st.sidebar.error("❌ Incorrect file format. Please upload a valid medical CSV.")
 
-# **Search Section**
 st.markdown("<div class='search-container'>", unsafe_allow_html=True)
 query = st.text_input("🔍 Enter symptoms or keywords:", key="query_input")
 st.markdown("</div>", unsafe_allow_html=True)
 
 if st.button("Search 🔎", use_container_width=True):
-    df = load_data()  # ✅ Reload dataset before searching
+    df = load_data()  
     results = df[df['Symptoms'].str.contains(query, case=False, na=False)]
 
     if not results.empty:
@@ -174,7 +169,7 @@ if st.button("Search 🔎", use_container_width=True):
     else:
         st.warning("❌ No matching records found. Please try different keywords.")
 
-# Footer
+
 st.markdown("<div class='footer'>Powered by <b>TECHTITANS 🚀</b></div>", unsafe_allow_html=True)
 
 !pip install streamlit fastapi uvicorn pyngrok pandas requests nest_asyncio
@@ -183,12 +178,9 @@ import time
 import subprocess
 from pyngrok import ngrok
 
-# ✅ Start Streamlit in background
 process = subprocess.Popen(["streamlit", "run", "streamlit_app.py"])
 
-# ✅ Wait for Streamlit to start
 time.sleep(5)
 
-# ✅ Start ngrok tunnel for Streamlit (port 8501)
 public_url = ngrok.connect(addr="8501", proto="http").public_url
 print(f"🌍 Public Streamlit URL: {public_url}")
